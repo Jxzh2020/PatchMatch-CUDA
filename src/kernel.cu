@@ -15,7 +15,7 @@
  * @param num_iterations
  * @param nnf_from_a
  */
-void patchMatch(float* a, float* b, float* a_prime, float* b_prime, int width, int height, int patch_size, int u,
+void patchMatch(float* a, float* b, float* a_prime, float* b_prime, int width, int height, int channels, int patch_size, int u,
                 int num_iterations, int* nnf_from_a)
 {
     // Allocate device memory
@@ -24,47 +24,45 @@ void patchMatch(float* a, float* b, float* a_prime, float* b_prime, int width, i
     float* dev_a_prime;
     float* dev_b_prime;
 
-    cudaMalloc(&dev_a, width * height * sizeof(float));
-    cudaMalloc(&dev_b, width * height * sizeof(float));
-    cudaMalloc(&dev_a_prime, width * height * sizeof(float));
-    cudaMalloc(&dev_b_prime, width * height * sizeof(float));
+    cudaMalloc(&dev_a, width * height * channels * sizeof(float));
+    cudaMalloc(&dev_b, width * height * channels * sizeof(float));
+    cudaMalloc(&dev_a_prime, width * height * channels * sizeof(float));
+    cudaMalloc(&dev_b_prime, width * height * channels * sizeof(float));
 
-    cudaMemcpy(dev_a, a, width * height * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_b, b, width * height * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_a, a, width * height * channels * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_b, b, width * height * channels * sizeof(float), cudaMemcpyHostToDevice);
 
     // An initial value of A' is the same as A, meaning no style transfer
-    cudaMemcpy(dev_a_prime, a_prime, width * height * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_b_prime, b_prime, width * height * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_a_prime, a_prime, width * height * channels * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_b_prime, b_prime, width * height * channels * sizeof(float), cudaMemcpyHostToDevice);
 
     int* dev_forward_nnf;
     cudaMalloc(&dev_forward_nnf, 2 * width * height * sizeof(int));
 
-    //initialize_nnf << <dim3((width - 1) / BLOCK_SIZE + 1, (height - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
-    //    dev_forward_nnf, width, height, patch_size, 5206);
-    //    int* dev_backward_nnf;
-    //    cudaMalloc(&dev_backward_nnf, 2 * width * height * sizeof(int));
-    //
-    //    initialize_nnf<<<dim3((width - 1) / BLOCK_SIZE + 1, (height - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE)>>>(
-    //            dev_backward_nnf, width, height, 5206);
+    /*initialize_nnf << <dim3((width - 1) / BLOCK_SIZE + 1, (height - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
+        dev_forward_nnf, width, height, patch_size, 5206);
+        int* dev_backward_nnf;
+        cudaMalloc(&dev_backward_nnf, 2 * width * height * sizeof(int));*/
+
+    initialize_nnf<<<dim3((height - 1) / BLOCK_SIZE + 1, (width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE)>>>(
+            dev_forward_nnf, width, height, patch_size, 5206);
 
     float* dev_distances;
     cudaMalloc(&dev_distances, width * height * sizeof(float));
 
     // Main loop
-    for (int j = 0; j < num_iterations; j++) {
-        initialize_nnf << <dim3((height - 1) / BLOCK_SIZE + 1, (width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
-                dev_forward_nnf, width, height, patch_size, 5206);
+    for (int j = 0; j < 5; j++) {
         for (int i = 0; i < 6; i++) {
             apply_nnf << <dim3((height - 1) / BLOCK_SIZE + 1, (width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
-                    dev_a_prime, dev_b_prime, width, height, patch_size, u, dev_forward_nnf);
-            cudaDeviceSynchronize();
+                    dev_a_prime, dev_b_prime, width, height, channels, patch_size, u, dev_forward_nnf);
+            //cudaDeviceSynchronize();
             compute_patch_distances << <dim3((height - 1) / BLOCK_SIZE + 1, (width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
-                    dev_a, dev_b, dev_a_prime, dev_b_prime, width, height,
+                    dev_a, dev_b, dev_a_prime, dev_b_prime, width, height, channels,
                             patch_size, u, dev_forward_nnf, dev_distances);
-            cudaDeviceSynchronize();
+            //cudaDeviceSynchronize();
             propagate << <dim3((height - 1) / BLOCK_SIZE + 1, (width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
-                    dev_a, dev_b, width, height, dev_distances, dev_forward_nnf, patch_size, i % 2 == 1);
-            cudaDeviceSynchronize();
+                    dev_a, dev_b, width, height, channels, dev_distances, dev_forward_nnf, patch_size, i % 2 == 1);
+            //cudaDeviceSynchronize();
             //        if (i % 2 == 0) {
             //            compute_patch_distances<<<dim3((width - 1) / BLOCK_SIZE + 1, (height - 1) / BLOCK_SIZE + 1),dim3(BLOCK_SIZE, BLOCK_SIZE)>>>(
             //                    dev_a, dev_b, dev_a_prime, dev_b_prime, width, height,
@@ -81,12 +79,15 @@ void patchMatch(float* a, float* b, float* a_prime, float* b_prime, int width, i
             //                    dev_b, dev_a, width, height, dev_distances, dev_forward_nnf, patch_size, true);
             //        }
         }
+        /*random_search << <dim3((height - 1) / BLOCK_SIZE + 1, (width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
+            dev_a, dev_b, dev_a_prime, dev_b_prime, width, height, channels,
+            patch_size, u, dev_forward_nnf, dev_distances, 5206);*/
     }
 
 
     // Copy result back to host
     cudaMemcpy(nnf_from_a, dev_forward_nnf, 2 * width * height * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(a_prime, dev_a_prime, width * height * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(a_prime, dev_a_prime, width * height * channels * sizeof(float), cudaMemcpyDeviceToHost);
 
     // Free device memory
     cudaFree(dev_a);

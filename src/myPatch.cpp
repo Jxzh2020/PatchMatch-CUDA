@@ -3,6 +3,7 @@
 //
 #include <opencv2/opencv.hpp>
 #include <iostream>
+#include <vector>
 #include "patch.h"
 
 using namespace cv;
@@ -15,27 +16,39 @@ void gen_gpu() {
     Mat A_prime = imread("../img/source_style.png");
     Mat B_prime = imread("../img/target_fullgi.png");
 
-    cv::Mat gray_A, gray_B, gray_A_prime, gray_B_prime;
-
-    cv::cvtColor(A, gray_A, cv::COLOR_BGR2GRAY);
-    cv::cvtColor(B, gray_B, cv::COLOR_BGR2GRAY);
-    cv::cvtColor(A_prime, gray_A_prime, cv::COLOR_BGR2GRAY);
-    cv::cvtColor(B_prime, gray_B_prime, cv::COLOR_BGR2GRAY);
-
     // Convert to float arrays
-    int width = gray_A.cols;
-    int height = gray_A.rows;
-    
-    float* a = new float[width * height];
-    float* b = new float[width * height];
-    float* a_prime = new float[width * height];
-    float* b_prime = new float[width * height];
+    int width = A.cols;
+    int height = A.rows;
+    int channels = A.channels();
+
+    float* a = new float[width * height * channels];
+    float* b = new float[width * height * channels];
+    float* a_prime = new float[width * height * channels];
+    float* b_prime = new float[width * height * channels];
+
+    std::vector<cv::Mat> A_single_channel;
+    cv::split(A, A_single_channel);
+
+
+    std::vector<cv::Mat> B_single_channel;
+    cv::split(B, B_single_channel);
+
+
+    std::vector<cv::Mat> A_prime_single_channel;
+    cv::split(A_prime, A_prime_single_channel);
+
+    std::vector<cv::Mat> B_prime_single_channel;
+    cv::split(B_prime, B_prime_single_channel);
+
 
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
-            a[i * width + j] = static_cast<float>(gray_A.at<uchar>(i, j));
-            b[i * width + j] = static_cast<float>(gray_B.at<uchar>(i, j));
-            a_prime[i * width + j] = static_cast<float>(gray_A_prime.at<uchar>(i, j));
+            for (int k = 0; k < channels; k++) {
+                a[(i * width + j) * channels + k] = static_cast<float>(A_single_channel[k].at<uchar>(i, j));
+                b[(i * width + j) * channels + k] = static_cast<float>(B_single_channel[k].at<uchar>(i, j));
+                a_prime[(i * width + j) * channels + k] = static_cast<float>(A_prime_single_channel[k].at<uchar>(i, j));
+            }
+
         }
     }
 
@@ -43,23 +56,28 @@ void gen_gpu() {
     // memcpy(b_prime,b,sizeof(float)*width*height);
 
     // Run PatchMatch algorithm
+
     int patch_size = 5;
-    int num_iterations = 100;
+    int num_iterations = 6;
+    int u = 5;
 
     int* nnf_src_a = new int[2 * width * height];
 
-    patchMatch(b, a, b_prime, a_prime, width, height, patch_size, 2, num_iterations, nnf_src_a);
+    patchMatch(b, a, b_prime, a_prime, width, height, channels, patch_size, u, num_iterations, nnf_src_a);
 
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
-            gray_B_prime.at<uchar>(i, j) = (unsigned char)b_prime[i * width + j];//A_prime.at<uchar>((int)nnf_src_a[2*(i * width + j)], (int)nnf_src_a[2*(i * width + j) + 1]);
+            for (int k = 0; k < channels; k++)
+                B_prime_single_channel[k].at<uchar>(i, j) = static_cast<uchar>(b_prime[(i * width + j) * channels + k]);
         }
     }
+    cv::merge(B_prime_single_channel, B_prime);
 
-    imwrite("output/gray_A.jpeg", gray_A);
-    imwrite("output/gray_B.jpeg", gray_B);
-    imwrite("output/gray_A_prime.jpeg", gray_A_prime);
-    imwrite("output/gray_B_prime.jpeg", gray_B_prime);
+
+    imwrite("output/A.jpeg", A);
+    imwrite("output/B.jpeg", B);
+    imwrite("output/A_prime.jpeg", A_prime);
+    imwrite("output/B_prime.jpeg", B_prime);
     // Free memory
     delete[] a;
     delete[] b;
