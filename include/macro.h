@@ -5,9 +5,11 @@
 #ifndef PATCHMATCH_MACRO_H
 #define PATCHMATCH_MACRO_H
 
+#define SUB_BLOCK_SIZE 16
 #define BLOCK_SIZE 32
 #define MAX_DISPLACEMENT 256
 #define RANDOM_CNT 5
+#define RANDOM_SEED 5206
 
 #include <cstdio>
 #include <cuda_runtime.h>
@@ -30,8 +32,8 @@ static void HandleError( cudaError_t err, const char *file, int line ) {
                                     __FILE__, __LINE__ ); \
                             exit( EXIT_FAILURE );}
 
-__global__ void random_search(float* a, float* b, float* dev_a_prime, float* dev_b_prime,
-                              int width, int height, int channels, int patch_size, int u, int* nnf, float* distances, int seed);
+__global__ void random_search(float* a, float* b, float* dev_a_prime,
+                              int width, int height, int channels, int patch_size, int u, int* nnf, float* distances);
 
 __global__ void apply_nnf(float* dev_a_prime, float* dev_b_prime,
                           int width, int height, int channels, int patch_size, int u, const int* nnf);

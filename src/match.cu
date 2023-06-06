@@ -1,5 +1,13 @@
 #include "macro.h"
 
+__device__ inline float my_vector_distance(float* a, float* b, int channels) {
+    auto result = 0.f;
+    for (int i = 0; i < channels; i++) {
+        result += pow((a[i] - b[i]), 2);
+    }
+    return sqrt(result);
+}
+
 __device__ float patch_distance(float* a, float* b, int width, int channels, int patch_size) {
     float dist = 0.f;
     for (int i = 0; i < patch_size; i++) {
@@ -8,6 +16,7 @@ __device__ float patch_distance(float* a, float* b, int width, int channels, int
                 // naive way of distance
                 dist += fabs(a[(i * width + j) * channels + k] - b[(i * width + j) * channels + k]);
             }
+//            dist +=my_vector_distance(&a[(i * width + j) * channels], &b[(i * width + j) * channels], patch_size);
 
     }
     return dist;
@@ -205,8 +214,9 @@ __global__ void propagate(float* a, float* b, int width, int height, int channel
     nnf[2 * idx] = best_x;
     nnf[2 * idx + 1] = best_y;
 }
-__global__ void random_search(float* a, float* b, float* dev_a_prime, float* dev_b_prime,
-                              int width, int height, int channels, int patch_size, int u, int* nnf, float* distances, int seed) {
+__global__ void random_search(float* a, float* b, float* dev_a_prime, int width, int height,
+                              int channels, int patch_size, int u, int* nnf, float* distances) {
+    //printf("Launching random_search");
 
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -230,15 +240,18 @@ __global__ void random_search(float* a, float* b, float* dev_a_prime, float* dev
 
     int tid = x * width + y;
     curandState_t state;
-    curand_init(seed, tid, 0, &state);
+    curand_init(RANDOM_SEED, tid, 0, &state);
 
-    for (int cnt = 0; cnt < offset_radius * offset_radius; cnt++) {
+    for (int cnt = 0; cnt < offset_radius; cnt++) {
+        if (offset_radius < patch_size)
+            break;
         int dx = target_x + (int)(curand_uniform(&state) * (2 * offset_radius)) - offset_radius;
         int dy = target_y + (int)(curand_uniform(&state) * (2 * offset_radius)) - offset_radius;
         if (!(dx >= 0 && dx < height - patch_size && dy >= 0 && dy < width - patch_size)) {
             cnt--;
             continue;
         }
+
         tmp_dist_prime = patch_distance(&dev_a_prime[idx * channels], &dev_a_prime[(dx * width + dy) * channels], width, channels, patch_size);
         tmp_dist = patch_distance(&a[idx * channels], &b[(dx * width + dy) * channels], width, channels, patch_size);
         tmp_dist = u * tmp_dist_prime * tmp_dist_prime + tmp_dist * tmp_dist;
@@ -253,8 +266,7 @@ __global__ void random_search(float* a, float* b, float* dev_a_prime, float* dev
             offset_y = (int)fabs((float)dy - y);
             offset_radius = offset_x > offset_y ? offset_x : offset_y;
             cnt = 0;
-            if (offset_radius < patch_size)
-                break ;
+            return ;
         }
     }
 }
