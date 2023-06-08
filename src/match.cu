@@ -97,8 +97,7 @@ __global__ void apply_nnf(float* dev_a_prime, float* dev_b_prime,
     int target_x = nnf[2 * idx];
     int target_y = nnf[2 * idx + 1];
 
-    idx *= channels;
-    int target_idx = (target_x * B_width + target_y) * channels;
+    int target_idx = (target_x * B_width + target_y);
 
     //if (target_x >= height - patch_size || target_y >= width - patch_size) {
     //    //printf("NNF Overflow! ");
@@ -119,7 +118,7 @@ __global__ void apply_nnf(float* dev_a_prime, float* dev_b_prime,
 
     // TODO: the length is actually x_min + x_max + 1
     float rgb[3];
-    average_patch(&dev_b_prime[target_idx - x_min * B_width * PRIME_CHANNELS - y_min * PRIME_CHANNELS], B_width, PRIME_CHANNELS, x_min + x_max, y_min + y_max, rgb);
+    average_patch(&dev_b_prime[(target_idx - x_min * B_width - y_min) * PRIME_CHANNELS], B_width, PRIME_CHANNELS, x_min + x_max, y_min + y_max, rgb);
     if (iteration == 0) {
         for (int i = 0; i < PRIME_CHANNELS; i++)
             dev_a_prime[x * A_width * PRIME_CHANNELS + y * PRIME_CHANNELS + i] = rgb[i];

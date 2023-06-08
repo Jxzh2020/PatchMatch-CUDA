@@ -48,6 +48,6 @@ __global__ void initialize_nnf(int* nnf, int A_width, int A_height, int B_width,
 __global__ void propagate(float* a, float* b, float* dev_a_prime,
                           float* dev_b_prime, int A_width, int A_height, int B_width,
                           int B_height, int channels, float* distance,
-                          int* nnf, int u, int patch_size, const bool reversed);
+                          int* nnf, int u, int patch_size, bool reversed);
 
 #endif //PATCHMATCH_MACRO_H

@@ -27,15 +27,15 @@ void patchMatch(float* a, float* b, float* a_prime, float* b_prime, int A_width,
 
     cudaMalloc(&dev_a, A_width * A_height * channels * sizeof(float));
     cudaMalloc(&dev_b, B_width * B_height * channels * sizeof(float));
-    cudaMalloc(&dev_a_prime, A_width * A_height * channels * sizeof(float));
-    cudaMalloc(&dev_b_prime, B_width * B_height * channels * sizeof(float));
+    cudaMalloc(&dev_a_prime, A_width * A_height * PRIME_CHANNELS * sizeof(float));
+    cudaMalloc(&dev_b_prime, B_width * B_height * PRIME_CHANNELS * sizeof(float));
 
     cudaMemcpy(dev_a, a, A_width * A_height * channels * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(dev_b, b, B_width * B_height * channels * sizeof(float), cudaMemcpyHostToDevice);
 
     // An initial value of A' is the same as A, meaning no style transfer
-    cudaMemcpy(dev_a_prime, a_prime, A_width * A_height * channels * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_b_prime, b_prime, B_width * B_height * channels * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_a_prime, a_prime, A_width * A_height * PRIME_CHANNELS * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_b_prime, b_prime, B_width * B_height * PRIME_CHANNELS * sizeof(float), cudaMemcpyHostToDevice);
 
     int* dev_forward_nnf;
     cudaMalloc(&dev_forward_nnf, 2 * A_width * A_height * sizeof(int));
@@ -90,7 +90,7 @@ void patchMatch(float* a, float* b, float* a_prime, float* b_prime, int A_width,
 
     // Copy result back to host
     cudaMemcpy(nnf_from_a, dev_forward_nnf, 2 * A_width * A_height * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(a_prime, dev_a_prime, A_width * A_height * channels * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(a_prime, dev_a_prime, A_width * A_height * PRIME_CHANNELS * sizeof(float), cudaMemcpyDeviceToHost);
 
     // Free device memory
     cudaFree(dev_a);
