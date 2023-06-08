@@ -52,39 +52,48 @@ void patchMatch(float* a, float* b, float* a_prime, float* b_prime, int A_width,
     cudaMalloc(&dev_distances, A_width * A_height * sizeof(float));
 
 
+
     // Main loop
     for (int i = 0; i < num_iterations; i++) {
-        apply_nnf << <dim3((A_height - 1) / BLOCK_SIZE + 1, (A_width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
-                dev_a_prime, dev_b_prime, A_width, A_height, B_width, B_height, channels, patch_size, u, i, dev_forward_nnf);
 
-        for (int j = 0; j < 5; j++) {
+        compute_patch_distances << <dim3((A_height - 1) / BLOCK_SIZE + 1, (A_width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
+                dev_a, dev_b, dev_a_prime, dev_b_prime, A_width, A_height, B_width, B_height, channels,
+                        patch_size, i == 0 ? 10000 : u, dev_forward_nnf, dev_distances);
+        for (int j = 0; j < 6; j++) {
 
             //cudaDeviceSynchronize();
-            compute_patch_distances << <dim3((A_height - 1) / BLOCK_SIZE + 1, (A_width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
-                    dev_a, dev_b, dev_a_prime, dev_b_prime, A_width, A_height, B_width, B_height, channels,
-                            patch_size, u, dev_forward_nnf, dev_distances);
-            //cudaDeviceSynchronize();
+
             propagate <<<dim3((A_height - 1) / BLOCK_SIZE + 1, (A_width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE)>>> (
-                    dev_a, dev_b, dev_a_prime, dev_b_prime, A_width, A_height, B_width, B_height, channels, dev_distances, dev_forward_nnf, u, patch_size, i % 2 == 1);
+                    dev_a, dev_b, dev_a_prime, dev_b_prime, A_width, A_height, B_width, B_height, channels, dev_distances, dev_forward_nnf, i == 0 ? 10000 : u, patch_size, i % 2 == 1);
 
-            /*random_search << <dim3((height - 1) / SUB_BLOCK_SIZE + 1, (width - 1) / SUB_BLOCK_SIZE + 1), dim3(SUB_BLOCK_SIZE, SUB_BLOCK_SIZE) >> > (
-                dev_a, dev_b, dev_a_prime, width, height, channels,
-                patch_size, u, dev_forward_nnf, dev_distances);
-            apply_nnf << <dim3((height - 1) / BLOCK_SIZE + 1, (width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
-                dev_a_prime, dev_b_prime, width, height, channels, patch_size, u, dev_forward_nnf);*/
+            random_search << <dim3((A_height - 1) / BLOCK_SIZE + 1, (A_width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
+                    dev_a, dev_b, dev_a_prime, dev_b_prime, A_width, A_height, B_width, B_height, channels,
+                            patch_size, i == 0 ? 10000 : u, dev_forward_nnf, dev_distances);
 
+            //apply_nnf << <dim3((A_height - 1) / BLOCK_SIZE + 1, (A_width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
+            //    dev_a_prime, dev_b_prime, A_width, A_height, B_width, B_height, channels, patch_size, u, 1, dev_forward_nnf);
+            //if (j % 2 == 0) {
+            //    random_search << <dim3((A_height - 1) / BLOCK_SIZE + 1, (A_width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
+            //        dev_a, dev_b, dev_a_prime, dev_b_prime, A_width, A_height, B_width, B_height, channels,
+            //        patch_size, u, dev_forward_nnf, dev_distances);
+            //    apply_nnf << <dim3((A_height - 1) / BLOCK_SIZE + 1, (A_width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
+            //        dev_a_prime, dev_b_prime, A_width, A_height, B_width, B_height, channels, patch_size, u, 1, dev_forward_nnf);
+            //}
 
         }
+        apply_nnf << <dim3((A_height - 1) / BLOCK_SIZE + 1, (A_width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
+                dev_a_prime, dev_b_prime, A_width, A_height, B_width, B_height, channels, patch_size, u, i, dev_forward_nnf);
+        //random_search << <dim3((A_height - 1) / BLOCK_SIZE + 1, (A_width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
+        //    dev_a, dev_b, dev_a_prime, dev_b_prime, A_width, A_height, B_width, B_height, channels,
+        //    patch_size, u, dev_forward_nnf, dev_distances);
+        HANDLE_ERROR(cudaGetLastError());
 
     }
 
-    apply_nnf <<<dim3((A_height - 1) / BLOCK_SIZE + 1, (A_width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE)>>> (
-            dev_a_prime, dev_b_prime, A_width, A_height, B_width, B_height, channels, patch_size, u, 1, dev_forward_nnf);
+    /*apply_nnf <<<dim3((A_height - 1) / BLOCK_SIZE + 1, (A_width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE)>>> (
+        dev_a_prime, dev_b_prime, A_width, A_height, B_width, B_height, channels, patch_size, u, 1, dev_forward_nnf);*/
     HANDLE_ERROR(cudaGetLastError());
-    //random_search << <dim3((height - 1) / SUB_BLOCK_SIZE + 1, (width - 1) / SUB_BLOCK_SIZE + 1), dim3(SUB_BLOCK_SIZE, SUB_BLOCK_SIZE) >> > (
-    //    dev_a, dev_b, dev_a_prime, width, height, channels,
-    //    patch_size, u, dev_forward_nnf, dev_distances);
-    HANDLE_ERROR(cudaGetLastError());
+
 
 
 

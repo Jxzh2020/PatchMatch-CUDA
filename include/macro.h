@@ -5,6 +5,7 @@
 #ifndef PATCHMATCH_MACRO_H
 #define PATCHMATCH_MACRO_H
 
+#define RATIO 2
 #define PRIME_CHANNELS 3
 #define BLOCK_SIZE 16
 #define SUB_BLOCK_SIZE 16
@@ -33,8 +34,8 @@ static void HandleError( cudaError_t err, const char *file, int line ) {
                                     __FILE__, __LINE__ ); \
                             exit( EXIT_FAILURE );}
 
-__global__ void random_search(float* a, float* b, float* dev_a_prime,
-                              int width, int height, int channels, int patch_size, int u, int* nnf, float* distances);
+__global__ void random_search(float* a, float* b, float* dev_a_prime, float* dev_b_prime, int A_width, int A_height, int B_width, int B_height,
+                              int channels, int patch_size, int u, int* nnf, float* distances);
 
 __global__ void apply_nnf(float* dev_a_prime, float* dev_b_prime,
                           int A_width, int A_height, int B_width, int B_height,
@@ -48,6 +49,6 @@ __global__ void initialize_nnf(int* nnf, int A_width, int A_height, int B_width,
 __global__ void propagate(float* a, float* b, float* dev_a_prime,
                           float* dev_b_prime, int A_width, int A_height, int B_width,
                           int B_height, int channels, float* distance,
-                          int* nnf, int u, int patch_size, bool reversed);
+                          int* nnf, int u, int patch_size, const bool reversed);
 
 #endif //PATCHMATCH_MACRO_H

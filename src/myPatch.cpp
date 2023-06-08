@@ -59,10 +59,6 @@ void gen_gpu() {
     int channels = 0;
     std::vector<cv::Mat> temp;
 
-//    channels += A[0].channels();
-//    cv::split(A[0], A_channel);
-//    cv::split(B[0], B_channel);
-
     for (int i = 0; i < pics_num; i++) {
         channels += A[i].channels();
         cv::split(A[i], temp);
@@ -71,6 +67,7 @@ void gen_gpu() {
         cv::split(B[i], temp);
         B_channel.insert(B_channel.end(), temp.begin(), temp.end());
         temp.clear();
+
     }
 
 
@@ -104,13 +101,14 @@ void gen_gpu() {
 
 
     // b_prime := b
-    // memcpy(b_prime,b,sizeof(float)*width*height);
+    for (int i = 0; i < B_width * B_height * A_prime.channels(); i++)
+        b_prime[i] = 255.f;
 
     // Run PatchMatch algorithm
 
     int patch_size = 5;
-    int num_iterations = 6;
-    int u = 2;
+    int num_iterations = 2;
+    int u = 1;
 
     int* nnf_src_a = new int[2 * B_width * B_height];
 

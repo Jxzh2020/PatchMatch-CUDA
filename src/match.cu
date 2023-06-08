@@ -52,16 +52,27 @@ __device__ void average_patch(float* b_prime, int B_width, int channels, int pat
 
 __device__ float patch_distance(float* a, float* b, int A_width, int B_width, int channels, int patch_height, int patch_width) {
     float dist = 0.f;
+    float dis_one = 0.f;
+    float tmp;
     for (int i = 0; i < patch_height; i++) {
         for (int j = 0; j < patch_width; j++)
             for (int k = 0; k < channels; k++) {
                 // naive way of distance
                 dist += fabs(a[(i * A_width + j) * channels + k] - b[(i * B_width + j) * channels + k]);
+
+                //if ((k + 1) % 3 == 0) {
+                //    dist += sqrt(dis_one);
+                //    dis_one = 0.f;
+                //}
+                //else {
+                //    tmp = (a[(i * A_width + j) * channels + k] - b[(i * B_width + j) * channels + k]);
+                //    dis_one += tmp*tmp;
+                //}
             }
         /*dist +=my_vector_distance(&a[(i * width + j) * channels], &b[(i * width + j) * channels], patch_size);*/
 
     }
-    return dist / (float)(patch_height * patch_width * channels);
+    return dist / (patch_height * patch_width * channels);
 }
 
 __global__ void initialize_nnf(int* nnf, int A_width, int A_height, int B_width, int B_height, int patch_size, int seed) {
@@ -74,11 +85,11 @@ __global__ void initialize_nnf(int* nnf, int A_width, int A_height, int B_width,
     //TODO: Random radius points based on A's size, it should be based on B's
     if (x < A_height && y < A_width ) {
         curand_init(seed, tid, 0, &state);
-        int dx = (int)(curand_uniform(&state) * (2 * MAX_DISPLACEMENT)) - MAX_DISPLACEMENT;
-        int dy = (int)(curand_uniform(&state) * (2 * MAX_DISPLACEMENT)) - MAX_DISPLACEMENT;
+        int dx = (int)(curand_uniform(&state) * (B_height));
+        int dy = (int)(curand_uniform(&state) * (B_width));
 
-        nnf[2 * (x * A_width + y)] = x + dx >= 0 && x + dx < B_height ? x + dx : x;
-        nnf[2 * (x * A_width + y) + 1] = y + dy >= 0 && y + dy < B_width ? y + dy : y;
+        nnf[2 * (x * A_width + y)] = dx;//x + dx >= 0 && x + dx < B_height ? x + dx : x;
+        nnf[2 * (x * A_width + y) + 1] =  dy; // y + dy >= 0 && y + dy < B_width ? y + dy : y;
     }
 }
 
@@ -119,13 +130,21 @@ __global__ void apply_nnf(float* dev_a_prime, float* dev_b_prime,
     // TODO: the length is actually x_min + x_max + 1
     float rgb[3];
     average_patch(&dev_b_prime[(target_idx - x_min * B_width - y_min) * PRIME_CHANNELS], B_width, PRIME_CHANNELS, x_min + x_max, y_min + y_max, rgb);
+
+    /*x_min = x_min > 1 ? 1 : x_min;
+    y_min = y_min > 1 ? 1 : y_min;
+    x_max = x_max > 2 ? 2 : x_max;
+    y_max = y_max > 2 ? 2 : y_max;
+    average_patch(&dev_b_prime[(target_idx - x_min * B_width - y_min) * PRIME_CHANNELS], B_width, PRIME_CHANNELS, x_min + x_max, y_min + y_max, rgb);*/
+    //average_patch(&dev_b_prime[(target_idx) * PRIME_CHANNELS], B_width, PRIME_CHANNELS, 1, 1, rgb);
+
     if (iteration == 0) {
         for (int i = 0; i < PRIME_CHANNELS; i++)
             dev_a_prime[x * A_width * PRIME_CHANNELS + y * PRIME_CHANNELS + i] = rgb[i];
     }
     else {
         for (int i = 0; i < PRIME_CHANNELS; i++)
-            dev_a_prime[x * A_width * PRIME_CHANNELS + y * PRIME_CHANNELS + i] = (dev_a_prime[x * A_width * PRIME_CHANNELS + y * PRIME_CHANNELS + i] + rgb[i]) / 2;
+            dev_a_prime[x * A_width * PRIME_CHANNELS + y * PRIME_CHANNELS + i] = (dev_a_prime[x * A_width * PRIME_CHANNELS + y * PRIME_CHANNELS + i] + rgb[i]*(RATIO - 1)) / RATIO;
     }
 }
 
@@ -282,59 +301,61 @@ __global__ void propagate(float* a, float* b, float* dev_a_prime, float* dev_b_p
 }
 
 
-//__global__ void random_search(float* a, float* b, float* dev_a_prime, int width, int height,
-//    int channels, int patch_size, int u, int* nnf, float* distances) {
-//    //printf("Launching random_search");
-//
-//    int x = blockIdx.x * blockDim.x + threadIdx.x;
-//    int y = blockIdx.y * blockDim.y + threadIdx.y;
-//
-//    if (x >= height - patch_size || y >= width - patch_size) {
-//        return ;
-//    }
-//
-//    int idx = x * width + y;
-//
-//    int target_x = nnf[2 * idx];
-//    int target_y = nnf[2 * idx + 1];
-//
-//    int offset_x = fabs((float)target_x - x);
-//    int offset_y = fabs((float)target_y - y);
-//
-//    int offset_radius = offset_x > offset_y ? offset_x : offset_y;
-//
-//    float dist = distances[idx];
-//    float tmp_dist, tmp_dist_prime;
-//
-//    int tid = x * width + y;
-//    curandState_t state;
-//    curand_init(RANDOM_SEED, tid, 0, &state);
-//
-//    for (int cnt = 0; cnt < offset_radius; cnt++) {
-//        if (offset_radius < patch_size)
-//            break;
-//        int dx = target_x + (int)(curand_uniform(&state) * (2 * offset_radius)) - offset_radius;
-//        int dy = target_y + (int)(curand_uniform(&state) * (2 * offset_radius)) - offset_radius;
-//        if (!(dx >= 0 && dx < height - patch_size && dy >= 0 && dy < width - patch_size)) {
-//            cnt--;
-//            continue;
-//        }
-//
-//        tmp_dist_prime = patch_distance(&dev_a_prime[idx * channels], &dev_a_prime[(dx * width + dy) * channels], width, channels, patch_size);
-//        tmp_dist = patch_distance(&a[idx * channels], &b[(dx * width + dy) * channels], width, channels, patch_size);
-//        tmp_dist = tmp_dist_prime * tmp_dist_prime + u * tmp_dist * tmp_dist;
-//        if (tmp_dist < dist) {
-//            dist = tmp_dist;
-//            distances[idx] = dist;
-//            nnf[2 * idx] = dx;
-//            nnf[2 * idx + 1] = dy;
-//            target_x = dx;
-//            target_y = dy;
-//            offset_x = (int)fabs((float)dx - x);
-//            offset_y = (int)fabs((float)dy - y);
-//            offset_radius = offset_x > offset_y ? offset_x : offset_y;
-//            cnt = 0;
-//            return ;
-//        }
-//    }
-//}
+__global__ void random_search(float* a, float* b, float* dev_a_prime, float* dev_b_prime, int A_width, int A_height, int B_width, int B_height,
+                              int channels, int patch_size, int u, int* nnf, float* distances) {
+    //printf("Launching random_search");
+
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x >= A_height || y >= A_width) {
+        return ;
+    }
+
+    int idx = x * A_width + y;
+
+    int target_x = nnf[2 * idx];
+    int target_y = nnf[2 * idx + 1];
+
+    int offset_x = fabs((float)target_x - x);
+    int offset_y = fabs((float)target_y - y);
+
+    int offset_radius = offset_x > offset_y ? offset_x : offset_y;
+
+    float dist = distances[idx];
+    float tmp_dist, tmp_prime_dist;
+    int x_min, y_min, x_max, y_max;
+    int target_idx;
+
+    curandState_t state;
+    curand_init(RANDOM_SEED, idx, 0, &state);
+
+    for ( ; offset_radius > 1; offset_radius /= 2 ) {
+
+        int dx = target_x + (int)(curand_uniform(&state) * (2 * offset_radius)) - offset_radius;
+        int dy = target_y + (int)(curand_uniform(&state) * (2 * offset_radius)) - offset_radius;
+
+        if (!(dx >= 0 && dx < B_height && dy >= 0 && dy < B_width)) {
+            offset_radius *= 2;
+            continue;
+        }
+        target_idx = dx * B_width + dy;
+
+        cal_range(x, y, dx, dy, A_width, A_height, B_width, B_height, patch_size, &x_min, &x_max, &y_min, &y_max);
+        tmp_dist = patch_distance(&a[(idx - x_min * A_width - y_min) * channels], &b[(target_idx - x_min * B_width - y_min) * channels], A_width, B_width, channels, x_min + x_max, y_min + y_max);
+        tmp_prime_dist = patch_distance(&dev_a_prime[(idx - x_min * A_width - y_min) * PRIME_CHANNELS], &dev_b_prime[(target_idx - x_min * B_width - y_min) * PRIME_CHANNELS], A_width, B_width, PRIME_CHANNELS, x_min + x_max, y_min + y_max);
+        tmp_dist = tmp_prime_dist * tmp_prime_dist + u * tmp_dist * tmp_dist;
+        if (tmp_dist < dist) {
+            dist = tmp_dist;
+            distances[idx] = dist;
+            nnf[2 * idx] = dx;
+            nnf[2 * idx + 1] = dy;
+            target_x = dx;
+            target_y = dy;
+            offset_x = (int)fabs((float)dx - x);
+            offset_y = (int)fabs((float)dy - y);
+            offset_radius = offset_x > offset_y ? offset_x : offset_y;
+            return ;
+        }
+    }
+}
