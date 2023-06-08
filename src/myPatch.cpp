@@ -11,10 +11,10 @@ using namespace std;
 
 void gen_gpu() {
     // Read images
-    Mat A = imread("../img/source_fullgi.png");
-    Mat B = imread("../img/target_fullgi.png");
-    Mat A_prime = imread("../img/source_style.png");
-    Mat B_prime = imread("../img/target_fullgi.png");
+    Mat A = imread("img/source_fullgi.png");
+    Mat B = imread("img/target_fullgi.png");
+    Mat A_prime = imread("img/source_style.png");
+    Mat B_prime = imread("img/target_fullgi.png");
 
     // Convert to float arrays
     int width = A.cols;
@@ -59,11 +59,11 @@ void gen_gpu() {
 
     int patch_size = 5;
     int num_iterations = 6;
-    int u = 5;
+    int u = 2;
 
     int* nnf_src_a = new int[2 * width * height];
 
-    patchMatch(b, a, b_prime, a_prime, width, height, channels, patch_size, u, num_iterations, nnf_src_a);
+    patchMatch(b, a, b_prime, a_prime, B.cols, B.rows, A.cols, A.rows, channels, patch_size, u, num_iterations, nnf_src_a);
 
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
