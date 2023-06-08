@@ -213,7 +213,7 @@ __global__ void propagate(float* a, float* b, float* dev_a_prime, float* dev_b_p
                 target_idx = b_left_x * B_width + b_left_y;
                 cal_range(x, y, b_left_x, b_left_y, A_width, A_height, B_width, B_height, patch_size, &x_min, &x_max, &y_min, &y_max);
                 tmp_dist = patch_distance(&a[(idx - x_min * A_width - y_min) * channels], &b[(target_idx - x_min * B_width - y_min) * channels], A_width, B_width, channels, x_min + x_max, y_min + y_max);
-                tmp_prime_dist = patch_distance(&dev_a_prime[(idx - x_min * A_width - y_min) * PRIME_CHANNELS], &dev_b_prime[(target_idx - x_min * B_width - y_min) * PRIME_CHANNELS - y_min * PRIME_CHANNELS], A_width, B_width, PRIME_CHANNELS, x_min + x_max, y_min + y_max);
+                tmp_prime_dist = patch_distance(&dev_a_prime[(idx - x_min * A_width - y_min) * PRIME_CHANNELS], &dev_b_prime[(target_idx - x_min * B_width - y_min) * PRIME_CHANNELS], A_width, B_width, PRIME_CHANNELS, x_min + x_max, y_min + y_max);
                 tmp_dist = u * tmp_dist * tmp_dist + tmp_prime_dist * tmp_prime_dist;
                 if (dist > tmp_dist) {
                     dist = tmp_dist;
@@ -229,7 +229,7 @@ __global__ void propagate(float* a, float* b, float* dev_a_prime, float* dev_b_p
                 target_idx = b_up_x * B_width + b_up_y;
                 cal_range(x, y, b_up_x, b_up_y, A_width, A_height, B_width, B_height, patch_size, &x_min, &x_max, &y_min, &y_max);
                 tmp_dist = patch_distance(&a[(idx - x_min * A_width - y_min) * channels], &b[(target_idx - x_min * B_width - y_min) * channels], A_width, B_width, channels, x_min + x_max, y_min + y_max);
-                tmp_prime_dist = patch_distance(&dev_a_prime[(idx - x_min * A_width - y_min) * PRIME_CHANNELS], &dev_b_prime[(target_idx - x_min * B_width - y_min) * PRIME_CHANNELS - y_min * PRIME_CHANNELS], A_width, B_width, PRIME_CHANNELS, x_min + x_max, y_min + y_max);
+                tmp_prime_dist = patch_distance(&dev_a_prime[(idx - x_min * A_width - y_min) * PRIME_CHANNELS], &dev_b_prime[(target_idx - x_min * B_width - y_min) * PRIME_CHANNELS], A_width, B_width, PRIME_CHANNELS, x_min + x_max, y_min + y_max);
                 tmp_dist = u * tmp_dist * tmp_dist + tmp_prime_dist * tmp_prime_dist;
                 if (dist > tmp_dist) {
                     dist = tmp_dist;
@@ -250,7 +250,7 @@ __global__ void propagate(float* a, float* b, float* dev_a_prime, float* dev_b_p
                 target_idx = b_right_x * B_width + b_right_y;
                 cal_range(x, y, b_right_x, b_right_y, A_width, A_height, B_width, B_height, patch_size, &x_min, &x_max, &y_min, &y_max);
                 tmp_dist = patch_distance(&a[(idx - x_min * A_width - y_min) * channels], &b[(target_idx - x_min * B_width - y_min) * channels], A_width, B_width, channels, x_min + x_max, y_min + y_max);
-                tmp_prime_dist = patch_distance(&dev_a_prime[(idx - x_min * A_width - y_min) * PRIME_CHANNELS], &dev_b_prime[(target_idx - x_min * B_width - y_min) * PRIME_CHANNELS - y_min * PRIME_CHANNELS], A_width, B_width, PRIME_CHANNELS, x_min + x_max, y_min + y_max);
+                tmp_prime_dist = patch_distance(&dev_a_prime[(idx - x_min * A_width - y_min) * PRIME_CHANNELS], &dev_b_prime[(target_idx - x_min * B_width - y_min) * PRIME_CHANNELS], A_width, B_width, PRIME_CHANNELS, x_min + x_max, y_min + y_max);
                 tmp_dist = u * tmp_dist * tmp_dist + tmp_prime_dist * tmp_prime_dist;
                 if (dist > tmp_dist) {
                     dist = tmp_dist;
@@ -266,7 +266,7 @@ __global__ void propagate(float* a, float* b, float* dev_a_prime, float* dev_b_p
                 target_idx = b_down_x * B_width + b_down_y;
                 cal_range(x, y, b_down_x, b_down_y, A_width, A_height, B_width, B_height, patch_size, &x_min, &x_max, &y_min, &y_max);
                 tmp_dist = patch_distance(&a[(idx - x_min * A_width - y_min) * channels], &b[(target_idx - x_min * B_width - y_min) * channels], A_width, B_width, channels, x_min + x_max, y_min + y_max);
-                tmp_prime_dist = patch_distance(&dev_a_prime[(idx - x_min * A_width - y_min) * PRIME_CHANNELS], &dev_b_prime[(target_idx - x_min * B_width - y_min) * PRIME_CHANNELS - y_min * PRIME_CHANNELS], A_width, B_width, PRIME_CHANNELS, x_min + x_max, y_min + y_max);
+                tmp_prime_dist = patch_distance(&dev_a_prime[(idx - x_min * A_width - y_min) * PRIME_CHANNELS], &dev_b_prime[(target_idx - x_min * B_width - y_min) * PRIME_CHANNELS], A_width, B_width, PRIME_CHANNELS, x_min + x_max, y_min + y_max);
                 tmp_dist = u * tmp_dist * tmp_dist + tmp_prime_dist * tmp_prime_dist;
                 if (dist > tmp_dist) {
                     dist = tmp_dist;
