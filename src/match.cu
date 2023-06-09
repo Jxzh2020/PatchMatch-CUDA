@@ -121,8 +121,8 @@ __global__ void apply_nnf(float* dev_a_prime, float* dev_b_prime,
     int x_min = half_patch > target_x ? target_x : half_patch;
     int y_min = half_patch > target_y ? target_y : half_patch;
 
-    int x_max = half_patch > (A_height - target_x - 1) ? (A_height - target_x - 1) : half_patch;
-    int y_max = half_patch > (A_width - target_y - 1) ? (A_width - target_y - 1) : half_patch;
+    int x_max = half_patch > (B_height - target_x - 1) ? (B_height - target_x - 1) : half_patch;
+    int y_max = half_patch > (B_width - target_y - 1) ? (B_width - target_y - 1) : half_patch;
 
     ++x_max;
     ++y_max;

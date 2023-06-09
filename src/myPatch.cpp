@@ -107,7 +107,7 @@ void gen_gpu() {
     // Run PatchMatch algorithm
 
     int patch_size = 5;
-    int num_iterations = 2;
+    int num_iterations = 1;
     int u = 1;
 
     int* nnf_src_a = new int[2 * B_width * B_height];
