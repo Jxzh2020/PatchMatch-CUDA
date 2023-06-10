@@ -11,5 +11,8 @@ void enum_gpu();
 void patchMatch(float* a, float* b, float* a_prime, float* b_prime, int A_width, int A_height, int B_width,
                 int B_height, int channels, int patch_size, int u,
                 int num_iterations, int* nnf_from_a);
+//void patchMatch_reverse(float* a, float* b, float* a_prime, float* b_prime, int A_width, int A_height, int B_width,
+//    int B_height, int channels, int patch_size, int u,
+//    int num_iterations, int* nnf_from_a);
 
 #endif //PATCHMATCH_PATCH_H

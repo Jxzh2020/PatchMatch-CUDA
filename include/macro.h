@@ -8,7 +8,7 @@
 #define RATIO 2
 #define PRIME_CHANNELS 3
 #define BLOCK_SIZE 16
-#define SUB_BLOCK_SIZE 16
+//#define SUB_BLOCK_SIZE 16
 #define MAX_DISPLACEMENT 512
 #define RANDOM_CNT 5
 #define RANDOM_SEED 5206
@@ -50,5 +50,7 @@ __global__ void propagate(float* a, float* b, float* dev_a_prime,
                           float* dev_b_prime, int A_width, int A_height, int B_width,
                           int B_height, int channels, float* distance,
                           int* nnf, int u, int patch_size, const bool reversed);
+__global__ void re_diff(float* a, float* b, float* a_prime, float* b_prime, int A_width, int A_height, int B_width, int B_height,
+                        int channels, int patch_size, int u, int* nnf);
 
 #endif //PATCHMATCH_MACRO_H
