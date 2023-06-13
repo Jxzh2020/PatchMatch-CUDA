@@ -10,8 +10,8 @@
 using namespace cv;
 using namespace std;
 
-static const int pics_num = 4;
-static const int gaussian_levels = 3;
+static const int pics_num = 5;
+static const int gaussian_levels = 4;
 
 void gaussian_pyramid(const cv::Mat& img, int levels, std::vector<cv::Mat>& pyramid)
 {
@@ -257,7 +257,7 @@ int* pyramid_pass(const cv::Mat& A, const cv::Mat& B, const cv::Mat& A_prime, cv
         nnf_src_a = pre_nnf;
     nnf_src_a[0] = !pre_nnf ? -1 : nnf_src_a[0];
     
-    patchMatch(b, a, b_prime, a_prime, B_width, B_height, A_width, A_height, channels, patch_size, (int)u * pow(1.4, round), num_iterations, nnf_src_a);
+    patchMatch(b, a, b_prime, a_prime, B_width, B_height, A_width, A_height, channels, patch_size, (int)u * pow(16*round, round), num_iterations, nnf_src_a);
 
     //float* new_b_prime = new float[B_width * B_height * A_prime.channels()];
     //memcpy(new_b_prime, b_prime, sizeof(float) * B_width * B_height * A_prime.channels());
@@ -285,14 +285,20 @@ int* pyramid_pass(const cv::Mat& A, const cv::Mat& B, const cv::Mat& A_prime, cv
 
 void gen_gpu() {
 
-    const std::string name = "rabbit";
-    
+    int c, d;
+    std::cout << "1: rabbit\n2: train\n3: giant\n4: duck\n5: hat_bis\n6: dino\n7: hand\n" << std::endl;
+    const std::string name[7] = { "rabbit", "train", "giant", "duck", "hat_bis", "dino", "hand"};
+    std::cin >> c;
+    c--;
     cv::Mat A[pics_num], B[pics_num];
     cv::Mat A_merge, B_merge;
     std::string A_path[5] = { "files/sphere/rendered.png", "files/sphere/l_dde.png", "files/sphere/ld12e.png", "files/sphere/lde.png", "files/sphere/lse.png" };
-    std::string B_path[5] = { "files/" + name + "/rendered.png", "files/" + name + "/l_dde.png", "files/" + name + "/ld12e.png", "files/" + name + "/lde.png", "files/" + name + "/lse.png" };
-    cv::Mat A_prime = imread("files/sphere/comics.png"); //victor.png");//comics.png"); // "img/source_fullgi.png");// orange_aqua
-    cv::Mat B_prime = imread("files/duck/rendered.png");
+    std::string B_path[5] = { "files/" + name[c] + "/rendered.png", "files/" + name[c] + "/l_dde.png", "files/" + name[c] + "/ld12e.png", "files/" + name[c] + "/lde.png", "files/" + name[c] + "/lse.png"};
+    std::string style[6] = { "draw", "victor", "comics", "dreamy", "orange_aqua", "fragments"};
+    std::cout << "\n1: draw\n2: victor\n3: comics\n4: dreamy\n5: orange_aqua\n6: fragments" << std::endl;
+    std::cin >> d;
+    cv::Mat A_prime = imread("files/sphere/" + style[d-1] + ".png"); //victor.png");//comics.png"); // "img/source_fullgi.png");// orange_aqua
+    cv::Mat B_prime = imread("files/" + name[c] + "/rendered.png");
     std::vector<cv::Mat> A_pyramids, B_pyramids, A_prime_pyramids, B_prime_pyramids;
 
 
@@ -339,7 +345,11 @@ void gen_gpu() {
     //nnf = pyramid_pass(A_merge, B_merge, A_prime, B_prime, nnf, false);
     //**********************************
 
+
+    cv::imshow("TEMP_A", A[0]);
+    cv::imshow("TEMP_B", B[0]);
     cv::imshow("TEMP", B_prime_pyramids[0]);
+    cv::imshow("TEMP_ORI", A_prime_pyramids[0]);
     waitKey(0);
     cv::destroyAllWindows();
 

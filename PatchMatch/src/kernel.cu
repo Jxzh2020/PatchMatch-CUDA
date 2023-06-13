@@ -69,13 +69,13 @@ void patchMatch(float* a, float* b, float* a_prime, float* b_prime, int A_width,
 
             propagate <<<dim3((A_height - 1) / BLOCK_SIZE + 1, (A_width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE)>>> (
                 dev_a, dev_b, dev_a_prime, dev_b_prime, A_width, A_height, B_width, B_height, channels, dev_distances, dev_forward_nnf, i == 0 ? 10000 : u, patch_size, j % 2 == 1);
-                
-            random_search << <dim3((A_height - 1) / BLOCK_SIZE + 1, (A_width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
-                dev_a, dev_b, dev_a_prime, dev_b_prime, A_width, A_height, B_width, B_height, channels,
-                patch_size, i == 0 ? 10000 : u, dev_forward_nnf, dev_distances);
             re_diff << <dim3((A_height - 1) / BLOCK_SIZE + 1, (A_width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
                 dev_a, dev_b, dev_a_prime, dev_b_prime, A_width, A_height, B_width, B_height,
                 channels, patch_size, u, dev_forward_nnf);
+            random_search << <dim3((A_height - 1) / BLOCK_SIZE + 1, (A_width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
+                dev_a, dev_b, dev_a_prime, dev_b_prime, A_width, A_height, B_width, B_height, channels,
+                patch_size, i == 0 ? 10000 : u, dev_forward_nnf, dev_distances);
+            
             //apply_nnf << <dim3((A_height - 1) / BLOCK_SIZE + 1, (A_width - 1) / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (
             //    dev_a_prime, dev_b_prime, A_width, A_height, B_width, B_height, channels, patch_size, u, 1, dev_forward_nnf);
             //if (j % 2 == 0) {
