@@ -4,13 +4,14 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <vector>
+#include <cmath>
 #include "patch.h"
 
 using namespace cv;
 using namespace std;
 
-static const int pics_num = 4;
-static const int gaussian_levels = 3;
+static const int pics_num = 5;
+static const int gaussian_levels = 4;
 
 void gaussian_pyramid(const cv::Mat& img, int levels, std::vector<cv::Mat>& pyramid)
 {
@@ -175,7 +176,7 @@ int* pyrUp_NNF(int* nnf, const cv::Mat& cur_b_prime, int n_width, int n_height) 
 }
 
 // do one complete patch match on scaled img
-int* pyramid_pass(const cv::Mat& A, const cv::Mat& B, const cv::Mat& A_prime, cv::Mat& B_prime, int* pre_nnf, bool GenFirst) {
+int* pyramid_pass(const cv::Mat& A, const cv::Mat& B, const cv::Mat& A_prime, cv::Mat& B_prime, int* pre_nnf, int round, bool GenFirst) {
 
     int A_width = A.cols;
     int A_height = A.rows;
@@ -246,8 +247,8 @@ int* pyramid_pass(const cv::Mat& A, const cv::Mat& B, const cv::Mat& A_prime, cv
     // Run PatchMatch algorithm
 
     int patch_size = 5;
-    int num_iterations = 4;
-    int u = 2;
+    int num_iterations = 6;
+    int u = 2; // 2
 
     int* nnf_src_a;
     if (!pre_nnf)
@@ -255,7 +256,8 @@ int* pyramid_pass(const cv::Mat& A, const cv::Mat& B, const cv::Mat& A_prime, cv
     else
         nnf_src_a = pre_nnf;
     nnf_src_a[0] = !pre_nnf ? -1 : nnf_src_a[0];
-    patchMatch(b, a, b_prime, a_prime, B_width, B_height, A_width, A_height, channels, patch_size, u, num_iterations, nnf_src_a);
+
+    patchMatch(b, a, b_prime, a_prime, B_width, B_height, A_width, A_height, channels, patch_size, (int)u * pow(16*round, round), num_iterations, nnf_src_a);
 
     //float* new_b_prime = new float[B_width * B_height * A_prime.channels()];
     //memcpy(new_b_prime, b_prime, sizeof(float) * B_width * B_height * A_prime.channels());
@@ -283,12 +285,20 @@ int* pyramid_pass(const cv::Mat& A, const cv::Mat& B, const cv::Mat& A_prime, cv
 
 void gen_gpu() {
 
+    int c, d;
+    std::cout << "1: rabbit\n2: train\n3: giant\n4: duck\n5: hat_bis\n6: dino\n7: hand\n" << std::endl;
+    const std::string name[7] = { "rabbit", "train", "giant", "duck", "hat_bis", "dino", "hand"};
+    std::cin >> c;
+    c--;
     cv::Mat A[pics_num], B[pics_num];
     cv::Mat A_merge, B_merge;
     std::string A_path[5] = { "files/sphere/rendered.png", "files/sphere/l_dde.png", "files/sphere/ld12e.png", "files/sphere/lde.png", "files/sphere/lse.png" };
-    std::string B_path[5] = { "files/giant/rendered.png", "files/giant/l_dde.png", "files/giant/ld12e.png", "files/giant/lde.png", "files/giant/lse.png" };
-    cv::Mat A_prime = imread("files/sphere/comics.png"); //victor.png");//comics.png"); // "img/source_fullgi.png");//
-    cv::Mat B_prime = imread("files/giant/rendered.png");
+    std::string B_path[5] = { "files/" + name[c] + "/rendered.png", "files/" + name[c] + "/l_dde.png", "files/" + name[c] + "/ld12e.png", "files/" + name[c] + "/lde.png", "files/" + name[c] + "/lse.png"};
+    std::string style[6] = { "draw", "victor", "comics", "dreamy", "orange_aqua", "fragments"};
+    std::cout << "\n1: draw\n2: victor\n3: comics\n4: dreamy\n5: orange_aqua\n6: fragments" << std::endl;
+    std::cin >> d;
+    cv::Mat A_prime = imread("files/sphere/" + style[d-1] + ".png"); //victor.png");//comics.png"); // "img/source_fullgi.png");// orange_aqua
+    cv::Mat B_prime = imread("files/" + name[c] + "/rendered.png");
     std::vector<cv::Mat> A_pyramids, B_pyramids, A_prime_pyramids, B_prime_pyramids;
 
 
@@ -319,10 +329,10 @@ void gen_gpu() {
 
     for (int level = gaussian_levels -1 ; level >= 0; level--) {
         // do one Patch Match
-        nnf = pyramid_pass(A_pyramids[level], B_pyramids[level], A_prime_pyramids[level], B_prime_pyramids[level], nnf, level == gaussian_levels -1);
-        cv::imshow("TEMP", B_prime_pyramids[level]);
-        waitKey(0);
-        cv::destroyAllWindows();
+        nnf = pyramid_pass(A_pyramids[level], B_pyramids[level], A_prime_pyramids[level], B_prime_pyramids[level], nnf, level , level == gaussian_levels -1);
+        //cv::imshow("TEMP", B_prime_pyramids[level]);
+        //waitKey(0);
+        //cv::destroyAllWindows();
         if (level > 0) {
             cv::pyrUp(B_prime_pyramids[level], B_prime_pyramids[level - 1]);
             nnf = pyrUp_NNF(nnf, B_prime_pyramids[level], B_prime_pyramids[level - 1].cols, B_prime_pyramids[level - 1].rows);
@@ -336,6 +346,12 @@ void gen_gpu() {
     //**********************************
 
 
+    cv::imshow("TEMP_A", A[0]);
+    cv::imshow("TEMP_B", B[0]);
+    cv::imshow("TEMP", B_prime_pyramids[0]);
+    cv::imshow("TEMP_ORI", A_prime_pyramids[0]);
+    waitKey(0);
+    cv::destroyAllWindows();
 
     for (int i = 0; i < pics_num; i++) {
         imwrite("output/A_c" + std::to_string(i) + ".jpeg", A[i]);

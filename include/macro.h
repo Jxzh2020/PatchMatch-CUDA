@@ -53,5 +53,4 @@ __global__ void propagate(float* a, float* b, float* dev_a_prime,
 __global__ void re_diff(float* a, float* b, float* a_prime, float* b_prime, int A_width, int A_height, int B_width, int B_height,
                         int channels, int patch_size, int u, int* nnf);
 
-
 #endif //PATCHMATCH_MACRO_H
